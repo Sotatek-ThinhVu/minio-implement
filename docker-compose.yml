@@ -1,0 +1,28 @@
+version: "3.8"
+services:
+  minio:
+    image: minio/minio
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"
+    environment:
+      MINIO_ROOT_USER: "minio"
+      MINIO_ROOT_PASSWORD: "minio123@"
+    command: server /minio-data/data
+  postgresql:
+    container_name: postgres_flyway
+    image: postgres:14.1-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_LOGGING=true
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+    ports:
+      - "5432:5432"
+    volumes:
+      - db:/var/lib/postgresql/data
+volumes:
+  db: {}
+  minio-data: {}
