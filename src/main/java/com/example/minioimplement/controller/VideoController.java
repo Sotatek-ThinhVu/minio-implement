@@ -1,5 +1,6 @@
 package com.example.minioimplement.controller;
 
+import com.example.minioimplement.configuration.AmazonS3Config;
 import com.example.minioimplement.model.Range;
 import com.example.minioimplement.service.DefaultVideoService;
 import com.example.minioimplement.service.VideoService;
@@ -25,15 +26,18 @@ public class VideoController {
     @Value("${minio.streaming.default-chunk-size}")
     public Integer defaultChunkSize;
     @PostMapping
-    public ResponseEntity<UUID> save(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<UUID> save(@RequestParam("file") MultipartFile file,@RequestParam(required = false) String bucketName ) {
+        if(bucketName==null){
+            bucketName = AmazonS3Config.VIDEO_BUCKET_NAME;
+        }
         UUID fileUuid = videoService.save(file);
         return ResponseEntity.ok(fileUuid);
     }
 
-    @GetMapping("/{uuid}")
+    @GetMapping("")
     public ResponseEntity<byte[]> readChunk(
             @RequestHeader(value = HttpHeaders.RANGE, required = false) String range,
-            @PathVariable UUID uuid
+            @RequestParam UUID uuid
     ) {
         Range parsedRange = Range.parseHttpRangeString(range, defaultChunkSize);
         DefaultVideoService.ChunkWithMetadata chunkWithMetadata = videoService.fetchChunk(uuid, parsedRange);
@@ -52,5 +56,4 @@ public class VideoController {
     private String constructContentRangeHeader(Range range, long fileSize) {
         return  "bytes " + range.getRangeStart() + "-" + range.getRangeEnd(fileSize) + "/" + fileSize;
     }
-
 }

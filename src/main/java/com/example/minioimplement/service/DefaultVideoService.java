@@ -1,6 +1,6 @@
 package com.example.minioimplement.service;
 
-import com.example.minioimplement.exception.StorageException;
+import com.example.minioimplement.configuration.AmazonS3Config;
 import com.example.minioimplement.model.FileMetadata;
 import com.example.minioimplement.model.Range;
 import com.example.minioimplement.repository.FileMetadataRepository;
@@ -18,12 +18,12 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class DefaultVideoService implements VideoService{
-    private final MinioStorageService storageService;
+
+    private final AmazonS3Service amazonS3Service;
 
     private final FileMetadataRepository fileMetadataRepository;
 
-
-    private Logger log = LoggerFactory.getLogger(DefaultVideoService.class);
+    private final Logger log = LoggerFactory.getLogger(DefaultVideoService.class);
     @Override
     @Transactional
     public UUID save(MultipartFile video) {
@@ -32,32 +32,34 @@ public class DefaultVideoService implements VideoService{
             FileMetadata metadata = FileMetadata.builder()
                     .id(fileUuid.toString())
                     .size(video.getSize())
+                    .bucketName(AmazonS3Config.VIDEO_BUCKET_NAME)
+                    .fileName(video.getName())
                     .httpContentType(video.getContentType())
                     .build();
             fileMetadataRepository.save(metadata);
-            storageService.save(video, fileUuid);
+            amazonS3Service.saveVideoStream(fileUuid,video,AmazonS3Config.VIDEO_BUCKET_NAME);
             return fileUuid;
         } catch (Exception ex) {
             log.error("Exception occurred when trying to save the file", ex);
-            throw new StorageException(ex);
+            return null;
         }
     }
 
     @Override
     public ChunkWithMetadata fetchChunk(UUID uuid, Range range) {
         FileMetadata fileMetadata = fileMetadataRepository.findById(uuid.toString()).orElseThrow();
-        return new ChunkWithMetadata(fileMetadata, readChunk(uuid, range, fileMetadata.getSize()));
+        return new ChunkWithMetadata(fileMetadata, readChunk(uuid, range, fileMetadata.getSize(),fileMetadata.getBucketName()));
     }
 
-    private byte[] readChunk(UUID uuid, Range range, long fileSize) {
+    private byte[] readChunk(UUID uuid, Range range, long fileSize,String bucketName) {
         long startPosition = range.getRangeStart();
         long endPosition = range.getRangeEnd(fileSize);
         int chunkSize = (int) (endPosition - startPosition + 1);
-        try(InputStream inputStream = storageService.getInputStream(uuid, startPosition, chunkSize)) {
+        try(InputStream inputStream = amazonS3Service.getInputStream(uuid, startPosition, chunkSize,bucketName)) {
             return inputStream.readAllBytes();
         } catch (Exception exception) {
             log.error("Exception occurred when trying to read file with ID = {}", uuid);
-            throw new StorageException(exception);
+            return null;
         }
     }
 

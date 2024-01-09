@@ -1,6 +1,6 @@
 package com.example.minioimplement.controller;
 
-import com.example.minioimplement.exception.StorageException;
+import com.example.minioimplement.dto.FileDto;
 import com.example.minioimplement.service.FileService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -12,11 +12,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/pdffile")
+@RequestMapping("/pdf")
 public class PDFController {
 
     private static Logger log = LoggerFactory.getLogger(PDFController.class);
@@ -27,7 +26,7 @@ public class PDFController {
         try {
             UUID uuid = fileService.save(uploadfile);
             return ResponseEntity.ok(uuid);
-        } catch (StorageException ex){
+        } catch (Exception ex){
             log.error("Error when save file "+ex.getMessage());
         }
         return ResponseEntity.badRequest().body("error");
@@ -36,11 +35,9 @@ public class PDFController {
     @GetMapping(value = "/download",
     produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public void downloadFile(@RequestParam UUID uuid, HttpServletResponse response) throws Exception {
-
-        InputStream stream = fileService.getPdfFile(uuid);
-//        return IOUtils.toByteArray(stream);
-        byte[] data = stream.readAllBytes();
-        streamReport(response, data, "my_report.pdf");
+        FileDto file = fileService.getPdfFile(uuid);
+        byte[] data = file.getInputStream().readAllBytes();
+        streamReport(response, data, file.getName());
     }
 
     protected void streamReport(HttpServletResponse response, byte[] data, String name)

@@ -19,4 +19,8 @@ public class FileMetadata {
 
     private String httpContentType;
 
+    private String fileName;
+
+    private String bucketName;
+
 }
