@@ -1,7 +1,6 @@
 package com.example.minioimplement.controller;
 
 import com.example.minioimplement.exception.StorageException;
-import com.example.minioimplement.model.FileMetadata;
 import com.example.minioimplement.service.FileService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -46,11 +45,9 @@ public class PDFController {
 
     protected void streamReport(HttpServletResponse response, byte[] data, String name)
             throws IOException {
-
         response.setContentType("application/pdf");
         response.setHeader("Content-disposition", "attachment; filename=" + name);
         response.setContentLength(data.length);
-
         response.getOutputStream().write(data);
         response.getOutputStream().flush();
     }
